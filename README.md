@@ -1,177 +1,92 @@
-# Explainer for the TODO API
+# Progress Notification API Explainer
 
-**Instructions for the explainer author: Search for "todo" in this repository and update all the
-instances as appropriate. For the instances in `index.bs`, update the repository name, but you can
-leave the rest until you start the specification. Then delete the TODOs and this block of text.**
-
-This proposal is an early design sketch by [TODO: team] to describe the problem below and solicit
-feedback on the proposed solution. It has not been approved to ship in Chrome.
-
-TODO: Fill in the whole explainer template below using https://tag.w3.org/explainers/ as a
-reference. Look for [brackets].
-
-## Proponents
-
-- [Proponent team 1]
-- [Proponent team 2]
-- [etc.]
+## Authors
+- Reilly Grant
+- Ayu Ishii
 
 ## Participate
-- https://github.com/explainers-by-googlers/[your-repository-name]/issues
-- [Discussion forum]
+- https://github.com/explainers-by-googlers/progress-notification/issues
 
-## Table of Contents [if the explainer is longer than one printed page]
 
-<!-- Update this table of contents by running `npx doctoc README.md` -->
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+## Abstract
+The Progress Notification API is a proposal for a generic API which a developer can use to indicate to the user agent that it is performing an important task which will take some time. How the user agent presents this information to the user is up to browser implementors; however an indication of an operation in progress may be a prerequisite for the developer to use other APIs. This provides user agents with information about a site’s intention to perform such a task and therefore may allow the task to continue while the site is no longer visible because its tab is occluded.
 
-- [Introduction](#introduction)
-- [Goals](#goals)
-- [Non-goals](#non-goals)
-- [User research](#user-research)
-- [Use cases](#use-cases)
-  - [Use case 1](#use-case-1)
-  - [Use case 2](#use-case-2)
-- [[Potential Solution]](#potential-solution)
-  - [How this solution would solve the use cases](#how-this-solution-would-solve-the-use-cases)
-    - [Use case 1](#use-case-1-1)
-    - [Use case 2](#use-case-2-1)
-- [Detailed design discussion](#detailed-design-discussion)
-  - [[Tricky design choice #1]](#tricky-design-choice-1)
-  - [[Tricky design choice 2]](#tricky-design-choice-2)
-- [Considered alternatives](#considered-alternatives)
-  - [[Alternative 1]](#alternative-1)
-  - [[Alternative 2]](#alternative-2)
-- [Stakeholder Feedback / Opposition](#stakeholder-feedback--opposition)
-- [References & acknowledgements](#references--acknowledgements)
+## Motivating Use Cases
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+### System Wake Lock
+A system wake lock allows an application to keep the system from entering a sleep state. It is similar to a screen wake lock, which prevents the display from turning off due to inactivity. Some APIs already implicitly acquire a screen or system wake lock, for example, playing audio or video. The challenge for developers is that if their application isn’t performing one of these tasks but still has work in progress (for example, encoding an image for upload) then the system could go to sleep, particularly if the user puts their device down to wait for the operation to complete. This creates a poor user experience when the user returns to the device expecting the operation to be complete only to discover it stopped after a few seconds and they need to keep the phone awake manually.
 
-## Introduction
+### Background Tab Resources
+To remain fast with many tabs, browsers have to restrict the resource usage of background tabs. There are browsers today which run background tabs with a low CPU/network priority or with timer throttling. To further improve the speed of what’s in the foreground, browsers could freeze background tabs (as defined in the [Page Lifecycle API](https://wicg.github.io/page-lifecycle/spec.html)). This is challenging to do without breaking important use cases, such as uploading large files to the cloud or processing data from a background tab. The progress notification API could be used by background tabs to indicate when they are doing important work for the user. The browser could take that as a hint to not restrict their resource usage (no freezing, but also no CPU/network priority downgrading and no timer throttling). To avoid abuse of the progress notification API, browsers should surface to the user which tabs use it and let the user decide if they want their resource usage to be restricted anyways.
 
-[The "executive summary" or "abstract".
-Explain in a few sentences what the goals of the project are,
-and a brief overview of how the solution works.
-This should be no more than 1-2 paragraphs.]
+### Key Scenarios
+These use cases aim to help with the following class of operations that sites would not want interrupted, even if the tab is occluded.
 
-## Goals
-
-[What is the **end-user need** which this project aims to address? Make this section short, and
-elaborate in the Use cases section.]
+* Downloading offline videos
+* Uploading large files
+* Video or image processing
+* Long payment transactions on shopping sites
 
 ## Non-goals
+* Extending the lifetime of a service worker when important work shouldn’t be interrupted by document closure is deferred to Phase 2
+* Extending the lifetime of a service worker when important work is triggered by a background event is deferred to Phase 2
 
-[If there are "adjacent" goals which may appear to be in scope but aren't,
-enumerate them here. This section may be fleshed out as your design progresses and you encounter necessary technical and other trade-offs.]
 
-## User research
+## Creating a Progress Notification for a Task
+This explainer introduces a new `ProgressNotification` interface that can be initialized with a title and options to specify progress type. Browsers may use these inputs to surface details of the ongoing task in the UI when the site is not visible.
 
-[If any user research has been conducted to inform your design choices,
-discuss the process and findings. User research should be more common than it is.]
+The `update` method is for informing the browser when progress has been made, and to update the UI. This will take in a progress parameter ranging from [1-100] and `timeRemaining` value in seconds.
 
-## Use cases
-
-[Describe in detail what problems end-users are facing, which this project is trying to solve. A
-common mistake in this section is to take a web developer's or server operator's perspective, which
-makes reviewers worry that the proposal will violate [RFC 8890, The Internet is for End
-Users](https://www.rfc-editor.org/rfc/rfc8890).]
-
-### Use case 1
-
-### Use case 2
-
-<!-- In your initial explainer, you shouldn't be attached or appear attached to any of the potential
-solutions you describe below this. -->
-
-## [Potential Solution]
-
-[For each related element of the proposed solution - be it an additional JS method, a new object, a new element, a new concept etc., create a section which briefly describes it.]
+The `close` method is for informing the browser when a task has completed, and can be used by the browser to hide or update the UI as complete. 
 
 ```js
-// Provide example code - not IDL - demonstrating the design of the feature.
-
-// If this API can be used on its own to address a user need,
-// link it back to one of the scenarios in the goals section.
-
-// If you need to show how to get the feature set up
-// (initialized, or using permissions, etc.), include that too.
+const progress = new ProgressNotification("Processing image...",
+                                          { type: 'determinate' });
+while (!task.complete()) {
+  task.step();
+  progress.update(task.calculateProgress());
+}
+progress.close();
 ```
 
-[Where necessary, provide links to longer explanations of the relevant pre-existing concepts and API.
-If there is no suitable external documentation, you might like to provide supplementary information as an appendix in this document, and provide an internal link where appropriate.]
-
-[If this is already specced, link to the relevant section of the spec.]
-
-[If spec work is in progress, link to the PR or draft of the spec.]
-
-[If you have more potential solutions in mind, add ## Potential Solution 2, 3, etc. sections.]
-
-### How this solution would solve the use cases
-
-[If there are a suite of interacting APIs, show how they work together to solve the use cases described.]
-
-#### Use case 1
-
-[Description of the end-user scenario]
-
+## WebIDL
 ```js
-// Sample code demonstrating how to use these APIs to address that scenario.
+enum ProgressNotificationType {
+  determinate,
+  indeterminate
+};
+
+dictionary ProgressNotificationOptions {
+  required ProgressNotificationType type;
+};
+
+[Exposed=(Window,Worker), SecureContext]
+interface ProgressNotification {
+  constructor(DOMString title, ProgressNotificationOptions options);
+
+  undefined update(double progress, optional double timeRemaining);
+  undefined close();
+};
 ```
 
-#### Use case 2
+## UI Design Considerations
+Browser implementations should display the following when a tab running a background task is occluded
+* Origin of the site
+* Button to abort background work
+* Option to never allow background work
 
-[etc.]
+Other UI considerations
+* Provided title
+* Progress bar or animation for showing progress 
+* On task completion, user agents may choose to hide the task UI, or mark the UI as complete keeping it persisted for users to see
 
-## Detailed design discussion
+## Security Considerations
+This proposal creates a UI surface under developer control. Implementations must be careful to ensure that the developer-specified message is presented with context to prevent it from being confused with browser UI.
 
-### [Tricky design choice #1]
+Since this proposal is limited to only allow a document to continue executing scripts in cases where they would otherwise be throttled or the system put to sleep, there should be no additional security issues. 
 
-[Talk through the tradeoffs in coming to the specific design point you want to make.]
-
-```js
-// Illustrated with example code.
-```
-
-[This may be an open question,
-in which case you should link to any active discussion threads.]
-
-### [Tricky design choice 2]
-
-[etc.]
+## Privacy Considerations
+Use cases above involve allowing a site to continue doing work in situations where currently they cannot. This has privacy implications because the execution of script itself can leak information such as the user’s current location through network accesses. The Progress Notification UI can include a button to stop the action and give the user the option to prevent the site from doing background work in the future. This keeps the user in control.  
 
 ## Considered alternatives
-
-[This should include as many alternatives as you can,
-from high level architectural decisions down to alternative naming choices.]
-
-### [Alternative 1]
-
-[Describe an alternative which was considered,
-and why you decided against it.]
-
-### [Alternative 2]
-
-[etc.]
-
-## Stakeholder Feedback / Opposition
-
-[Implementors and other stakeholders may already have publicly stated positions on this work. If you can, list them here with links to evidence as appropriate.]
-
-- [Implementor A] : Positive
-- [Stakeholder B] : No signals
-- [Implementor C] : Negative
-
-[If appropriate, explain the reasons given by other implementors for their concerns.]
-
-## References & acknowledgements
-
-[Your design will change and be informed by many people; acknowledge them in an ongoing way! It helps build community and, as we only get by through the contributions of many, is only fair.]
-
-[Unless you have a specific reason not to, these should be in alphabetical order.]
-
-Many thanks for valuable feedback and advice from:
-
-- [Person 1]
-- [Person 2]
-- [etc.]
+One alternative to a general progress notification API is to add this capability to individual APIs. There are a number of cases where browsers do that. For example, the browser may hold a system wake lock when playing audio or a screen wake lock while playing video in order to match user expectations about how their device should behave when performing those functions. As we found with the Screen Wake Lock API however there are cases where the browser can’t guess about that user expectation. For example, when following a recipe you don’t want your screen to turn off while your hands are too dirty to touch the device. There isn’t any one particular thing the site is doing that would indicate that user expectation but it is something the developer understands. An explicit API to tell the browser that the site is doing something which the user might want to continue to see on the screen solves this problem. For this proposal, the background tab throttling use case provides the strongest signal that the ability for a developer to tell the browser that there is a user visible reason why script should be running is useful.
