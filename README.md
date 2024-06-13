@@ -90,3 +90,9 @@ Use cases above involve allowing a site to continue doing work in situations whe
 
 ## Considered alternatives
 One alternative to a general progress notification API is to add this capability to individual APIs. There are a number of cases where browsers do that. For example, the browser may hold a system wake lock when playing audio or a screen wake lock while playing video in order to match user expectations about how their device should behave when performing those functions. As we found with the Screen Wake Lock API however there are cases where the browser can’t guess about that user expectation. For example, when following a recipe you don’t want your screen to turn off while your hands are too dirty to touch the device. There isn’t any one particular thing the site is doing that would indicate that user expectation but it is something the developer understands. An explicit API to tell the browser that the site is doing something which the user might want to continue to see on the screen solves this problem. For this proposal, the background tab throttling use case provides the strongest signal that the ability for a developer to tell the browser that there is a user visible reason why script should be running is useful.
+
+## References & Acknowledgements
+Many thanks to valuable feedback and advice from:
+* François Doray
+* Vincent Scheib
+* Austin Sullivan
