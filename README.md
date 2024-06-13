@@ -28,8 +28,8 @@ These use cases aim to help with the following class of operations that sites wo
 * Long payment transactions on shopping sites
 
 ## Non-goals
-* Extending the lifetime of a service worker when important work shouldn’t be interrupted by document closure is deferred to Phase 2
-* Extending the lifetime of a service worker when important work is triggered by a background event is deferred to Phase 2
+* Extending the lifetime of a service worker when important work shouldn’t be interrupted by document closure is deferred to [Phase 2](/sw-explainer.md)
+* Extending the lifetime of a service worker when important work is triggered by a background event is deferred to [Phase 2](/sw-explainer.md)
 
 
 ## Creating a Progress Notification for a Task
