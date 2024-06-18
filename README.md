@@ -72,6 +72,7 @@ const progress = new ProgressNotification('Tracking geolocation', {
 
 button.addEventListener('click', () => {
   navigator.geolocation.clearWatch(id);
+  progress.close();
 });
 ```
 
