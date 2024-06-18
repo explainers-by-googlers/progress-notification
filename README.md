@@ -66,13 +66,14 @@ progress.close();
 ```js
 let id = navigator.geolocation.watchPosition(success, error, options);
 
-const progress = new ProgressNotification('Tracking geolocation', {
+let progress = new ProgressNotification('Tracking geolocation', {
   type: 'indeterminate',
 });
 
 button.addEventListener('click', () => {
   navigator.geolocation.clearWatch(id);
   progress.close();
+  progress = null;
 });
 ```
 
